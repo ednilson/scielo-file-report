@@ -1,7 +1,7 @@
-import os
+import argparse
 import csv
 import datetime
-import argparse
+import os
 import sys
 
 
@@ -10,7 +10,7 @@ def ler_acronimos_arquivo(caminho_arquivo):
         with open(caminho_arquivo, 'r', encoding='utf-8') as f:
             return [linha.strip() for linha in f if linha.strip()]
     except FileNotFoundError:
-        print(f"Arquivo de acrônimos não encontrado: {caminho_arquivo}")
+        print("Arquivo de acrônimos não encontrado: ", caminho_arquivo)
         sys.exit(1)
 
 
@@ -18,7 +18,7 @@ def listar_acronimos_automaticamente(root_dir):
     try:
         return [d for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
     except Exception as e:
-        print(f"Erro ao listar diretórios em {root_dir}: {e}")
+        print("Erro ao listar diretórios em %s: %s" % (root_dir, e))
         sys.exit(1)
 
 
@@ -40,10 +40,10 @@ def coletar_dados(root_dir, list_acron, output_csv, file_ext):
         for acron in list_acron:
             acron_path = os.path.join(root_dir, acron)
             if not os.path.isdir(acron_path):
-                print(f"[!] Diretório não encontrado para acrônimo: {acron}")
+                print("Diretório não encontrado para acrônimo: ", acron)
                 continue
 
-            print(f"Processando acrônimo: {acron}")
+            print("Processando acrônimo: ", acron)
             for dirpath, _, filenames in os.walk(acron_path):
                 for file in filenames:
                     if file.lower().endswith(ext_with_dot):
@@ -65,9 +65,9 @@ def coletar_dados(root_dir, list_acron, output_csv, file_ext):
                                 file_size
                             ])
                         except Exception as e:
-                            print(f"Erro ao processar {full_path}: {e}")
+                            print("Erro ao processar %s: %s" % (full_path, e))
 
-    print(f"Relatório gerado com sucesso: {output_csv}")
+    print("Relatório gerado com sucesso: ", output_csv)
 
 
 def main():
@@ -80,7 +80,7 @@ def main():
 
     ext = args.ext.lower().strip().lstrip('.')
     if ext not in ['xml', 'pdf']:
-        print(f"Extensão '{ext}' não suportada. Use 'xml' ou 'pdf'.")
+        print("Extensão %s não suportada. Use 'xml' ou 'pdf'." % (ext))
         sys.exit(1)
 
     root_dir = os.path.join(args.base_dir, ext)
@@ -90,7 +90,7 @@ def main():
     if args.acron_file:
         list_acron = ler_acronimos_arquivo(args.acron_file)
     else:
-        print(f"Nenhum arquivo de acrônimos informado. Detectando todos os diretórios diretamente em: {root_dir}")
+        print("Nenhum arquivo de acrônimos informado. Detectando todos os diretórios diretamente em: ", root_dir)
         list_acron = listar_acronimos_automaticamente(root_dir)
 
     coletar_dados(root_dir, list_acron, output_csv, ext)
