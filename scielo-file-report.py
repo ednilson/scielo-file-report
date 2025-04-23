@@ -1,8 +1,15 @@
 import argparse
 import csv
 import datetime
+import io
 import os
 import sys
+import xml.etree.ElementTree as ET
+
+
+# Força a codificação de saída para utf-8:surrogateescape
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, errors="surrogateescape", line_buffering=True)
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, errors="surrogateescape", line_buffering=True)
 
 
 def ler_acronimos_arquivo(caminho_arquivo):
@@ -25,17 +32,50 @@ def listar_acronimos_automaticamente(root_dir):
 def gerar_nome_csv(ext, output_dir="output"):
     now = datetime.datetime.now().strftime('%Y-%m-%d__%H%M')
     print("Data e hora: ", now)
-    filename = f"{ext.lower()}_{now}.csv"
+    filename = "%s_%s.csv" % (ext.lower(), now)
     os.makedirs(output_dir, exist_ok=True)
     return os.path.join(output_dir, filename)
 
 
+def conteudo_xml(xml_path):
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        
+        texto_total = ''.join(elem.text.strip() for elem in root.iter() if elem.text)
+        tamanho = len(texto_total.encode('utf-8'))
+        
+        doctype = root.findall('.')[0].attrib['article-type']
+
+        # PIDV2, PIDV3 e DOI
+        for e in root.findall('.//article-id'):
+            # if 'scielo-v2' in e.attrib.values():
+            #     pidv2 = e.text
+            # if 'scielo-v3' in e.attrib.values():
+            #     pidv3 = e.text
+            if 'doi' in e.attrib.values():
+                doi = e.text
+
+        # return [tamanho, doctype,  pidv2, pidv3, doi]
+        return [tamanho, doctype, doi]
+    
+    except Exception as e:
+        print("Erro ao obter conteúdo XML em %s: %s" % (xml_path, e))
+        return ''
+
+
 def coletar_dados(root_dir, list_acron, output_csv, file_ext):
-    ext_with_dot = f".{file_ext.lower().strip().lstrip('.')}"
+    ext_with_dot = file_ext.lower().strip().lstrip('.')
 
     with open(output_csv, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
-        writer.writerow(['acron', 'path', 'vol_num', 'file_name', 'file_date', 'file_size'])
+
+        headers = ['acron', 'path', 'vol_num', 'file_name', 'file_date', 'file_size']
+        if file_ext == 'xml':
+            # headers.extend(['xml_content_size', 'doctype', 'pidv2', 'pidv3', 'doi'])
+            headers.extend(['xml_content_size', 'doctype', 'doi'])
+
+        writer.writerow(headers)
 
         for acron in list_acron:
             acron_path = os.path.join(root_dir, acron)
@@ -56,14 +96,18 @@ def coletar_dados(root_dir, list_acron, output_csv, file_ext):
                             creation_date = datetime.datetime.fromtimestamp(stats.st_mtime).strftime('%Y-%m-%d')
                             file_size = stats.st_size
 
-                            writer.writerow([
+                            row = [
                                 acron,
                                 os.path.dirname(full_path) + '/',
                                 volume_num,
                                 file,
                                 creation_date,
                                 file_size
-                            ])
+                            ]
+
+                            if file_ext == 'xml':
+                                row.extend(conteudo_xml(full_path))
+                            writer.writerow(row)
                         except Exception as e:
                             print("Erro ao processar %s: %s" % (full_path, e))
 
@@ -90,7 +134,7 @@ def main():
     if args.acron_file:
         list_acron = ler_acronimos_arquivo(args.acron_file)
     else:
-        print("Nenhum arquivo de acrônimos informado. Detectando todos os diretórios diretamente em: ", root_dir)
+        # print("Nenhum arquivo de acrônimos informado. Detectando todos os diretórios diretamente em: ", root_dir)
         list_acron = listar_acronimos_automaticamente(root_dir)
 
     coletar_dados(root_dir, list_acron, output_csv, ext)
