@@ -42,21 +42,22 @@ def conteudo_xml(xml_path):
         tree = ET.parse(xml_path)
         root = tree.getroot()
         
-        texto_total = ''.join(elem.text.strip() for elem in root.iter() if elem.text)
-        tamanho = len(texto_total.encode('utf-8'))
+        tamanho = None
+        doctype = None
+        doi = None
+        
+        if root.tag == 'article':
+            texto_total = ''.join(elem.text.strip() for elem in root.iter() if elem.text)
+            tamanho = len(texto_total.encode('utf-8'))
 
-        # Document type
-        if 'article-type' in root.findall('.')[0].attrib:
-            doctype = root.findall('.')[0].attrib['article-type']
-        else:
-            doctype = None
+            # Document type
+            if 'article-type' in root.findall('.')[0].attrib:
+                doctype = root.findall('.')[0].attrib['article-type']
 
-        # DOI
-        for e in root.findall('.//article-id'):
-            if 'doi' in e.attrib.values():
-                doi = e.text
-            else:
-                doi = None
+            # DOI
+            for e in root.findall('.//article-id'):
+                if 'doi' in e.attrib.values():
+                    doi = e.text
 
         return [tamanho, doctype, doi]
     
