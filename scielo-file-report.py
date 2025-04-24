@@ -44,19 +44,20 @@ def conteudo_xml(xml_path):
         
         texto_total = ''.join(elem.text.strip() for elem in root.iter() if elem.text)
         tamanho = len(texto_total.encode('utf-8'))
-        
-        doctype = root.findall('.')[0].attrib['article-type']
 
-        # PIDV2, PIDV3 e DOI
+        # Document type
+        if 'article-type' in root.findall('.')[0].attrib:
+            doctype = root.findall('.')[0].attrib['article-type']
+        else:
+            doctype = None
+
+        # DOI
         for e in root.findall('.//article-id'):
-            # if 'scielo-v2' in e.attrib.values():
-            #     pidv2 = e.text
-            # if 'scielo-v3' in e.attrib.values():
-            #     pidv3 = e.text
             if 'doi' in e.attrib.values():
                 doi = e.text
+            else:
+                doi = None
 
-        # return [tamanho, doctype,  pidv2, pidv3, doi]
         return [tamanho, doctype, doi]
     
     except Exception as e:
@@ -72,7 +73,6 @@ def coletar_dados(root_dir, list_acron, output_csv, file_ext):
 
         headers = ['acron', 'path', 'vol_num', 'file_name', 'file_date', 'file_size']
         if file_ext == 'xml':
-            # headers.extend(['xml_content_size', 'doctype', 'pidv2', 'pidv3', 'doi'])
             headers.extend(['xml_content_size', 'doctype', 'doi'])
 
         writer.writerow(headers)
@@ -134,7 +134,6 @@ def main():
     if args.acron_file:
         list_acron = ler_acronimos_arquivo(args.acron_file)
     else:
-        # print("Nenhum arquivo de acrônimos informado. Detectando todos os diretórios diretamente em: ", root_dir)
         list_acron = listar_acronimos_automaticamente(root_dir)
 
     coletar_dados(root_dir, list_acron, output_csv, ext)
